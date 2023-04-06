@@ -4,7 +4,6 @@ const cors = require("cors");
 require("dotenv").config();
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
-const MONGO_URI = process.env.MONGO_URI;
 const bodyParser = require("body-parser");
 
 app.use(cors());
@@ -17,10 +16,13 @@ const listener = app.listen(process.env.PORT || 3000, () => {
   console.log("Your app is listening on port " + listener.address().port);
 });
 
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+mongoose.connect(
+  "mongodb+srv://user1:user1@exercise-tracker.g7csotb.mongodb.net/?retryWrites=true&w=majority",
+  {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  }
+);
 
 const Schema = mongoose.Schema;
 
@@ -32,33 +34,34 @@ const userObj = new Schema({
 const user = mongoose.model("user", userObj);
 app.use(bodyParser.urlencoded({ extended: false }));
 
-app.post("/api/users", (req, res) => {
-  const username = req.username;
+app.post("/api/users", async (req, res) => {
+  const { username } = req.body;
   const _id = uuidv4();
+
+  const newUser = new user({ username, _id });
   try {
-    const newUser = new user({ username, _id });
-    newUser.save((err, data) => {
-      if (err) {
-        console.log(err);
-      } else {
-        res.json(data);
-      }
+    const data = await newUser.save();
+    return res.json({
+      username: data.username,
+      _id: data._id,
     });
   } catch (err) {
     console.log(err);
+    return res.status(500).json({ error: "Could not create user." });
   }
 });
 
-app.get("/api/users", (req, res) => {
-  user.find({}, (err, data) => {
-    if (err) {
-      console.log(err);
-    } else {
-      res.json(data);
-    }
-  });
+app.get("/api/users", async (req, res) => {
+  try {
+    const data = await user.find();
+    return res.json(data);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: "Could not get users." });
+  }
 });
 
+/* 
 const exerciseObj = new Schema({
   userId: { type: String, required: true },
   description: { type: String, required: true },
@@ -67,13 +70,4 @@ const exerciseObj = new Schema({
 });
 
 const exercise = mongoose.model("exercise", exerciseObj);
-
-app.get("/api/users", (req, res) => {
-  user.find({}, (err, data) => {
-    if (err) {
-      console.log(err);
-    } else {
-      res.json(data);
-    }
-  });
-});
+ */

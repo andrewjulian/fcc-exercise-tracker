@@ -104,3 +104,72 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
     console.log(err);
   }
 });
+
+const logsObj = new Schema({
+  userId: { type: String, required: true },
+  count: { type: Number, required: true },
+  log: { type: Array, required: true },
+});
+
+const logs = mongoose.model("logs", logsObj);
+
+app.post("/api/users/:_id/logs", async (req, res) => {
+  const { _id } = req.params;
+  const currentUser = user.findById(_id);
+
+  const newLogs = new logs({
+    userId: _id,
+    count: limit,
+    log: [],
+  });
+
+  try {
+    const data = await newLogs.save();
+    const user = await currentUser.exec();
+    return res.json({
+      username: user.username,
+      count: data.count,
+      log: data.log,
+      _id: data.userId,
+    });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+app.get("/api/users/:_id/logs", async (req, res) => {
+  const { _id } = req.params;
+  const { from, to, limit } = req.query;
+
+  try {
+    const data = await user.findById(_id);
+    const logs = await exercise
+      .find({ userId: _id })
+      .where("date")
+      .gt(from ? new Date(from) : new Date(0))
+      .lt(to ? new Date(to) : new Date())
+      .limit(limit ? parseInt(limit) : 0)
+      .exec();
+    const formattedLogs = logs.map((log) => ({
+      description: log.description,
+      duration: log.duration,
+      date: log.date
+        .toLocaleString("en-US", {
+          timeZone: "GMT",
+          weekday: "short",
+          month: "short",
+          day: "2-digit",
+          year: "numeric",
+        })
+        .replace(/,/g, ""),
+    }));
+    return res.json({
+      username: data.username,
+      count: logs.length,
+      log: formattedLogs,
+      _id: data._id,
+    });
+  } catch (err) {
+    console.log(err);
+  }
+});

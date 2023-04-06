@@ -61,7 +61,6 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-/* 
 const exerciseObj = new Schema({
   userId: { type: String, required: true },
   description: { type: String, required: true },
@@ -70,4 +69,38 @@ const exerciseObj = new Schema({
 });
 
 const exercise = mongoose.model("exercise", exerciseObj);
- */
+
+app.post("/api/users/:_id/exercises", async (req, res) => {
+  const { _id } = req.params;
+  const { description, duration, date } = req.body;
+  const currentUser = user.findById(_id);
+
+  const newExercise = new exercise({
+    userId: _id,
+    description,
+    duration,
+    date: date ? new Date(date) : new Date(),
+  });
+
+  try {
+    const data = await newExercise.save();
+    const user = await currentUser.exec();
+    return res.json({
+      username: user.username,
+      description: data.description,
+      duration: data.duration,
+      date: new Date(data.date)
+        .toLocaleString("en-US", {
+          timeZone: "GMT",
+          weekday: "short",
+          month: "short",
+          day: "2-digit",
+          year: "numeric",
+        })
+        .replace(/,/g, ""),
+      _id: data.userId,
+    });
+  } catch (err) {
+    console.log(err);
+  }
+});
